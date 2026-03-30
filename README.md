@@ -1,4 +1,4 @@
-# Projeto de compilador
+# Projeto de compilador JackCompiler
 
 Projeto para a cadeira de Compiladores da UFMA, período 2026.1
 
