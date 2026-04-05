@@ -52,5 +52,5 @@ class JackTokenizer:
             self.current_token_idx += 1
             self.current_type, self.current_value = self.tokens[self.current_token_idx]
 
-    def content(self):
+    def getTokens(self):
         print(self.tokens)

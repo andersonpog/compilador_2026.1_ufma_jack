@@ -1,6 +1,7 @@
 import sys
 
 from JackTokenizer import JackTokenizer
+from TokenToXML import generate_xml
 
 def main():
     args = sys.argv
@@ -11,8 +12,12 @@ def main():
     
     print("Realizando análise léxica do arquivo " + args[1] + ".jack")
 
+    # Testando apenas tokens
     tokenizer = JackTokenizer(args[1])
-    tokenizer.content()
+    tokenizer.getTokens()
+
+    # Testando token e xml
+    generate_xml(args[1])
         
         
 

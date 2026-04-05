@@ -1,0 +1,4 @@
+*.jack
+*T.xml
+.venv
+__pycache__/
