@@ -1,0 +1,4 @@
+// comentarios
+if (x < 0) {
+    let sign = "negative";
+}

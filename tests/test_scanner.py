@@ -106,8 +106,8 @@ def test_geracao_xml_square():
     path_input = os.path.join(CURR_DIR, nome_base)
     subpasta_txml = os.path.join(CURR_DIR, "txml")
 
-    path_resultado_gerado = os.path.join(subpasta_txml, nome_base + "T.xml")
-    path_gabarito_oficial = os.path.join(subpasta_txml, "SquareT_GABARITO.xml")
+    path_resultado_gerado = os.path.join(CURR_DIR, nome_base + "T.xml")
+    path_gabarito_oficial = os.path.join(subpasta_txml, nome_base + "T_GABARITO.xml")
 
 
     generate_xml(path_input)
