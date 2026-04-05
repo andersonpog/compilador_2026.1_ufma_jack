@@ -56,3 +56,16 @@ def test_string_basica():
     assert tokenizer.tokens[0][1] == "hello"
 
     os.remove(filename + ".jack")
+
+def test_string_vazia():
+    filename = "TesteStringVazia"
+
+    with open(filename + ".jack", "w", encoding="utf-8") as f:
+        f.write('""')
+
+    tokenizer = JackTokenizer(filename)
+
+    assert tokenizer.tokens[0][0] == "STR_CONST"
+    assert tokenizer.tokens[0][1] == ""
+
+    os.remove(filename + ".jack")
