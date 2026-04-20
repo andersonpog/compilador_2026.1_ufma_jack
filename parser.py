@@ -103,6 +103,23 @@ class Parser:
 
         self.close_tag("expression")
 
+    def parse_let(self):
+        self.open_tag("letStatement")
+
+        self.match('KEYWORD', 'let')
+        self.match('IDENTIFIER')
+
+        if self.peek() and self.peek()[1] == '[':
+            self.match('SYMBOL', '[')
+            self.parse_expression()
+            self.match('SYMBOL', ']')
+
+        self.match('SYMBOL', '=')
+        self.parse_expression()
+        self.match('SYMBOL', ';')
+
+        self.close_tag("letStatement")
+
     def open_tag(self, tag_name):
         indent = "  " * self.indent_level
         self.xml_output.append(f"{indent}<{tag_name}>")
