@@ -93,6 +93,16 @@ class Parser:
 
         self.close_tag("term")
 
+    def parse_expression(self):
+        self.open_tag("expression")
+        self.parse_term()
+
+        while self.peek() and self.peek()[1] in "+-*/&|<>=":
+            self.write_token(self.advance())  # Escreve o operador
+            self.parse_term()
+
+        self.close_tag("expression")
+
     def open_tag(self, tag_name):
         indent = "  " * self.indent_level
         self.xml_output.append(f"{indent}<{tag_name}>")
