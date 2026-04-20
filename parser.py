@@ -102,6 +102,64 @@ class Parser:
             self.parse_term()
 
         self.close_tag("expression")
+    
+    def parse_statements(self):
+        self.open_tag("statements")
+        # Continua processando enquanto houver palavras-chave de comandos
+        while self.peek() and self.peek()[1] in ['let', 'if', 'while', 'do', 'return']:
+            val = self.peek()[1]
+            if val == 'let': self.parse_let()
+            elif val == 'if': self.parse_if()
+            elif val == 'while': self.parse_while()
+            elif val == 'do': self.parse_do()
+            elif val == 'return': self.parse_return()
+        self.close_tag("statements")
+
+    def parse_if(self):
+        self.open_tag("ifStatement")
+        self.match('KEYWORD', 'if')
+        self.match('SYMBOL', '(')
+        self.parse_expression()
+        self.match('SYMBOL', ')')
+        self.match('SYMBOL', '{')
+        self.parse_statements()
+        self.match('SYMBOL', '}')
+        
+        # Trata o else opcional
+        if self.peek() and self.peek()[1] == 'else':
+            self.match('KEYWORD', 'else')
+            self.match('SYMBOL', '{')
+            self.parse_statements()
+            self.match('SYMBOL', '}')
+        self.close_tag("ifStatement")
+
+    def parse_while(self):
+        self.open_tag("whileStatement")
+        self.match('KEYWORD', 'while')
+        self.match('SYMBOL', '(')
+        self.parse_expression()
+        self.match('SYMBOL', ')')
+        self.match('SYMBOL', '{')
+        self.parse_statements()
+        self.match('SYMBOL', '}')
+        self.close_tag("whileStatement")
+
+    def parse_do(self):
+        self.open_tag("doStatement")
+        self.match('KEYWORD', 'do')
+        # Em Jack, chamadas de sub-rotina começam com um identificador
+        # Para simplificar agora, vamos tratar como um termo até o ponto e vírgula
+        self.parse_term() 
+        self.match('SYMBOL', ';')
+        self.close_tag("doStatement")
+
+    def parse_return(self):
+        self.open_tag("returnStatement")
+        self.match('KEYWORD', 'return')
+        if self.peek() and self.peek()[1] != ';':
+            self.parse_expression()
+        self.match('SYMBOL', ';')
+        self.close_tag("returnStatement")
 
     def parse_let(self):
         self.open_tag("letStatement")
