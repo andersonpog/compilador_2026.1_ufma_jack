@@ -67,24 +67,46 @@ class Parser:
         self.advance()
         return token
 
+    def parse_term(self):
+        self.open_tag("term")
+        token = self.peek()
+
+        if token is None:
+            raise SyntaxError("Termo esperado, mas fim da entrada encontrado")
+
+        token_type, token_value = token
+
+        if token_type == 'INT_CONST':
+            self.write_token(self.advance())
+
+        elif token_type == 'STR_CONST':
+            self.write_token(self.advance())
+
+        elif token_type == 'KEYWORD' and token_value in ['true', 'false', 'null', 'this']:
+            self.write_token(self.advance())
+
+        elif token_type == 'IDENTIFIER':
+            self.write_token(self.advance())
+
+        else:
+            raise SyntaxError(f"Termo esperado, encontrado: {token_value}")
+
+        self.close_tag("term")
+
     def open_tag(self, tag_name):
-        """Abre uma tag XML com indentação."""
         indent = "  " * self.indent_level
         self.xml_output.append(f"{indent}<{tag_name}>")
         self.indent_level += 1
 
     def close_tag(self, tag_name):
-        """Fecha uma tag XML com indentação."""
         self.indent_level -= 1
         indent = "  " * self.indent_level
         self.xml_output.append(f"{indent}</{tag_name}>")
 
     def escape_xml(self, value):
-        """Escapa caracteres especiais do XML."""
         return self.XML_ESCAPE.get(value, value)
 
     def write_token(self, token):
-        """Escreve um token no formato XML."""
         token_type, token_value = token
         indent = "  " * self.indent_level
 
@@ -97,5 +119,4 @@ class Parser:
         self.xml_output.append(f"{indent}<{tag}> {token_value} </{tag}>")
 
     def get_xml(self):
-        """Retorna o XML completo gerado."""
         return "\n".join(self.xml_output)
