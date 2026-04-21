@@ -102,6 +102,91 @@ class Parser:
             self.parse_term()
 
         self.close_tag("expression")
+
+    def parse_class(self):
+        self.open_tag("class")
+        self.match('KEYWORD', 'class')
+        self.match('IDENTIFIER') # className
+        self.match('SYMBOL', '{')
+        
+        # Processa variáveis de classe (static/field)
+        while self.peek() and self.peek()[1] in ['static', 'field']:
+            self.parse_class_var_dec()
+        
+        # Processa sub-rotinas (constructor/function/method)
+        while self.peek() and self.peek()[1] in ['constructor', 'function', 'method']:
+            self.parse_subroutine()
+            
+        self.match('SYMBOL', '}')
+        self.close_tag("class")
+
+    def parse_class_var_dec(self):
+        self.open_tag("classVarDec")
+        self.match('KEYWORD') # static | field
+        # O tipo pode ser keyword (int, char...) ou um identificador (ClassName)
+        self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER') 
+        self.match('IDENTIFIER') # varName
+        
+        # Trata múltiplas variáveis na mesma linha: static int x, y;
+        while self.peek() and self.peek()[1] == ',':
+            self.match('SYMBOL', ',')
+            self.match('IDENTIFIER')
+            
+        self.match('SYMBOL', ';')
+        self.close_tag("classVarDec")
+
+    def parse_subroutine(self):
+        self.open_tag("subroutineDec")
+        self.match('KEYWORD') # constructor | function | method
+        self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER') # void | type
+        self.match('IDENTIFIER') # subroutineName
+        self.match('SYMBOL', '(')
+        self.parse_parameter_list() # Precisaremos criar este método simples
+        self.match('SYMBOL', ')')
+        
+        # Subroutine Body
+        self.open_tag("subroutineBody")
+        self.match('SYMBOL', '{')
+        while self.peek() and self.peek()[1] == 'var':
+            self.parse_var_dec() # Precisaremos criar este também
+        self.parse_statements()
+        self.match('SYMBOL', '}')
+        self.close_tag("subroutineBody")
+        self.close_tag("subroutineDec")
+
+    def parse_var_dec(self):
+        self.open_tag("varDec")
+        self.match('KEYWORD', 'var')
+        
+        # O tipo pode ser keyword (int, char...) ou um identificador (ClassName)
+        self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER') 
+        self.match('IDENTIFIER') # varName
+        
+        # Trata múltiplas variáveis: var int a, b, c;
+        while self.peek() and self.peek()[1] == ',':
+            self.match('SYMBOL', ',')
+            self.match('IDENTIFIER')
+            
+        self.match('SYMBOL', ';')
+        self.close_tag("varDec")
+
+    def parse_parameter_list(self):
+        self.open_tag("parameterList")
+        
+        # Se o próximo token não for ')', significa que há parâmetros
+        if self.peek() and self.peek()[1] != ')':
+            # Primeiro parâmetro: tipo e nome
+            self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER')
+            self.match('IDENTIFIER')
+            
+            # Parâmetros adicionais separados por vírgula
+            while self.peek() and self.peek()[1] == ',':
+                self.match('SYMBOL', ',')
+                self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER')
+                self.match('IDENTIFIER')
+        
+        self.close_tag("parameterList")
+
     
     def parse_statements(self):
         self.open_tag("statements")
