@@ -82,3 +82,18 @@ def test_parse_while():
     assert "<whileStatement>" in xml
     assert "<symbol> ( </symbol>" in xml
     assert "<symbol> ) </symbol>" in xml
+
+def test_parse_class():
+    current_dir = os.path.dirname(__file__)
+    file_path = os.path.join(current_dir, "class_test")
+
+    tokenizer = JackTokenizer(file_path)
+    parser = Parser(tokenizer.tokens)
+    
+    parser.parse_class() # Inicia o processo do topo
+    xml = parser.get_xml()
+
+    assert "<class>" in xml
+    assert "<classVarDec>" in xml
+    assert "<subroutineDec>" in xml
+    assert "<subroutineBody>" in xml

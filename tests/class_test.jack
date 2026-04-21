@@ -1,0 +1,9 @@
+class Main {
+    field int x;
+    
+    function void main() {
+        var int i;
+        let i = 0;
+        return;
+    }
+}
