@@ -119,3 +119,43 @@ def test_geracao_xml_square():
         conteudo_esperado = f.read()
 
     assert xml == conteudo_esperado
+
+def test_geracao_xml_main():
+
+    nome_base = "Main"
+
+    path_input = os.path.join(CURR_DIR, nome_base)
+    subpasta_xml = os.path.join(CURR_DIR, "xml")
+
+    tokenizer = JackTokenizer(path_input)
+    parser = Parser(tokenizer.tokens)
+    
+    parser.parse_class() # Inicia o processo do topo
+    xml = parser.get_xml()
+
+    path_gabarito_oficial = os.path.join(subpasta_xml, nome_base + ".xml")
+
+    with open(path_gabarito_oficial, "r", encoding="utf-8") as f:
+        conteudo_esperado = f.read()
+
+    assert xml == conteudo_esperado
+
+def test_geracao_xml_square_game():
+
+    nome_base = "SquareGame"
+
+    path_input = os.path.join(CURR_DIR, nome_base)
+    subpasta_xml = os.path.join(CURR_DIR, "xml")
+
+    tokenizer = JackTokenizer(path_input)
+    parser = Parser(tokenizer.tokens)
+    
+    parser.parse_class() # Inicia o processo do topo
+    xml = parser.get_xml()
+
+    path_gabarito_oficial = os.path.join(subpasta_xml, nome_base + ".xml")
+
+    with open(path_gabarito_oficial, "r", encoding="utf-8") as f:
+        conteudo_esperado = f.read()
+
+    assert xml == conteudo_esperado
