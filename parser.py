@@ -1,4 +1,4 @@
-from VMWriter import VMWriter, Segment
+from VMWriter import VMWriter, Segment, Command
 
 
 class Parser:
@@ -25,6 +25,10 @@ class Parser:
 
         # Integração inicial com o gerador VM
         self.vmWriter = VMWriter()
+
+        # Contadores para gerar labels únicos
+        self.if_label_num = 0
+        self.while_label_num = 0
 
     def peek(self):
         """Retorna o token atual sem avançar."""
@@ -92,6 +96,16 @@ class Parser:
 
         elif token_type == 'KEYWORD' and token_value in ['true', 'false', 'null', 'this']:
             self.write_token(self.advance())
+
+            if token_value == 'true':
+                self.vmWriter.writePush(Segment.CONST, 0)
+                self.vmWriter.writeArithmetic(Command.NOT)
+
+            elif token_value == 'false' or token_value == 'null':
+                self.vmWriter.writePush(Segment.CONST, 0)
+
+            elif token_value == 'this':
+                self.vmWriter.writePush(Segment.POINTER, 0)
 
         # 2. Expressões entre parênteses: ( expression )
         elif token_value == '(':
@@ -180,6 +194,10 @@ class Parser:
 
     def parse_subroutine(self):
         self.open_tag("subroutineDec")
+
+        self.if_label_num = 0
+        self.while_label_num = 0
+
         self.match('KEYWORD')
         self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER')
         self.match('IDENTIFIER')
@@ -248,19 +266,37 @@ class Parser:
 
     def parse_if(self):
         self.open_tag("ifStatement")
+
+        label_true = f"IF_TRUE{self.if_label_num}"
+        label_false = f"IF_FALSE{self.if_label_num}"
+        label_end = f"IF_END{self.if_label_num}"
+        self.if_label_num += 1
+
         self.match('KEYWORD', 'if')
         self.match('SYMBOL', '(')
         self.parse_expression()
         self.match('SYMBOL', ')')
+
+        self.vmWriter.writeIf(label_true)
+        self.vmWriter.writeGoto(label_false)
+        self.vmWriter.writeLabel(label_true)
+
         self.match('SYMBOL', '{')
         self.parse_statements()
         self.match('SYMBOL', '}')
 
         if self.peek() and self.peek()[1] == 'else':
+            self.vmWriter.writeGoto(label_end)
+            self.vmWriter.writeLabel(label_false)
+
             self.match('KEYWORD', 'else')
             self.match('SYMBOL', '{')
             self.parse_statements()
             self.match('SYMBOL', '}')
+
+            self.vmWriter.writeLabel(label_end)
+        else:
+            self.vmWriter.writeLabel(label_false)
 
         self.close_tag("ifStatement")
 
