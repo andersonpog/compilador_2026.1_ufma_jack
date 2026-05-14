@@ -23,37 +23,28 @@ class Parser:
         self.xml_output = []
         self.indent_level = 0
 
-        # Integração inicial com o gerador VM
         self.vmWriter = VMWriter()
 
-        # Contadores para gerar labels únicos
         self.if_label_num = 0
         self.while_label_num = 0
 
     def peek(self):
-        """Retorna o token atual sem avançar."""
         if self.current < len(self.tokens):
             return self.tokens[self.current]
         return None
 
     def peek_next(self):
-        """Retorna o próximo token sem avançar."""
         if self.current + 1 < len(self.tokens):
             return self.tokens[self.current + 1]
         return None
 
     def advance(self):
-        """Avança para o próximo token e retorna o atual."""
         token = self.peek()
         if token is not None:
             self.current += 1
         return token
 
     def match(self, expected_type, expected_value=None):
-        """
-        Verifica se o token atual é do tipo esperado
-        e opcionalmente do valor esperado.
-        """
         token = self.peek()
 
         if token is None:
@@ -86,7 +77,6 @@ class Parser:
 
         token_type, token_value = token
 
-        # 1. Constantes e Palavras-chave
         if token_type == 'INT_CONST':
             self.write_token(self.advance())
             self.vmWriter.writePush(Segment.CONST, int(token_value))
@@ -107,32 +97,33 @@ class Parser:
             elif token_value == 'this':
                 self.vmWriter.writePush(Segment.POINTER, 0)
 
-        # 2. Expressões entre parênteses: ( expression )
         elif token_value == '(':
             self.match('SYMBOL', '(')
             self.parse_expression()
             self.match('SYMBOL', ')')
 
-        # 3. Operadores Unários: -x ou ~y
         elif token_value in ['-', '~']:
             self.match('SYMBOL', token_value)
             self.parse_term()
 
-        # 4. Identificadores (Variáveis, Arrays ou Chamadas de Função)
+            if token_value == '-':
+                self.vmWriter.writeArithmetic(Command.NEG)
+            elif token_value == '~':
+                self.vmWriter.writeArithmetic(Command.NOT)
+
         elif token_type == 'IDENTIFIER':
             self.write_token(self.advance())
 
-            # Caso seja um Array: varName[expression]
             if self.peek() and self.peek()[1] == '[':
                 self.match('SYMBOL', '[')
                 self.parse_expression()
                 self.match('SYMBOL', ']')
 
-            # Caso seja uma chamada de método/função no meio de expressão
             elif self.peek() and self.peek()[1] in ['(', '.']:
                 if self.peek()[1] == '.':
                     self.match('SYMBOL', '.')
                     self.match('IDENTIFIER')
+
                 self.match('SYMBOL', '(')
                 self.parse_expression_list()
                 self.match('SYMBOL', ')')
@@ -302,13 +293,29 @@ class Parser:
 
     def parse_while(self):
         self.open_tag("whileStatement")
+
+        label_exp = f"WHILE_EXP{self.while_label_num}"
+        label_end = f"WHILE_END{self.while_label_num}"
+        self.while_label_num += 1
+
+        self.vmWriter.writeLabel(label_exp)
+
         self.match('KEYWORD', 'while')
         self.match('SYMBOL', '(')
         self.parse_expression()
+
+        self.vmWriter.writeArithmetic(Command.NOT)
+        self.vmWriter.writeIf(label_end)
+
         self.match('SYMBOL', ')')
         self.match('SYMBOL', '{')
         self.parse_statements()
+
+        self.vmWriter.writeGoto(label_exp)
+        self.vmWriter.writeLabel(label_end)
+
         self.match('SYMBOL', '}')
+
         self.close_tag("whileStatement")
 
     def parse_do(self):
