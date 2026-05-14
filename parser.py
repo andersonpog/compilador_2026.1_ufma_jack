@@ -334,3 +334,6 @@ class Parser:
 
     def get_xml(self):
         return "\n".join(self.xml_output) + "\n"
+  
+    def get_vm_output(self):
+        return self.vmWriter.vmOutput()
