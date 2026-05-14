@@ -1,3 +1,6 @@
+from VMWriter import VMWriter
+
+
 class Parser:
     TAG_MAP = {
         'KEYWORD': 'keyword',
@@ -19,6 +22,9 @@ class Parser:
         self.current = 0
         self.xml_output = []
         self.indent_level = 0
+
+        # Integração inicial com o gerador VM
+        self.vmWriter = VMWriter()
 
     def peek(self):
         """Retorna o token atual sem avançar."""
@@ -122,7 +128,7 @@ class Parser:
         self.parse_term()
 
         while self.peek() and self.peek()[1] in "+-*/&|<>=":
-            self.write_token(self.advance())  # Escreve o operador
+            self.write_token(self.advance())
             self.parse_term()
 
         self.close_tag("expression")
@@ -130,11 +136,9 @@ class Parser:
     def parse_expression_list(self):
         self.open_tag("expressionList")
         
-        # Verifica se o próximo token NÃO é ')'. Se não for, temos expressões.
         if self.peek() and self.peek()[1] != ')':
             self.parse_expression()
             
-            # Enquanto houver vírgula, existem mais expressões na lista
             while self.peek() and self.peek()[1] == ',':
                 self.match('SYMBOL', ',')
                 self.parse_expression()
@@ -144,14 +148,12 @@ class Parser:
     def parse_class(self):
         self.open_tag("class")
         self.match('KEYWORD', 'class')
-        self.match('IDENTIFIER') # className
+        self.match('IDENTIFIER')
         self.match('SYMBOL', '{')
         
-        # Processa variáveis de classe (static/field)
         while self.peek() and self.peek()[1] in ['static', 'field']:
             self.parse_class_var_dec()
         
-        # Processa sub-rotinas (constructor/function/method)
         while self.peek() and self.peek()[1] in ['constructor', 'function', 'method']:
             self.parse_subroutine()
             
@@ -160,12 +162,10 @@ class Parser:
 
     def parse_class_var_dec(self):
         self.open_tag("classVarDec")
-        self.match('KEYWORD') # static | field
-        # O tipo pode ser keyword (int, char...) ou um identificador (ClassName)
-        self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER') 
-        self.match('IDENTIFIER') # varName
+        self.match('KEYWORD')
+        self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER')
+        self.match('IDENTIFIER')
         
-        # Trata múltiplas variáveis na mesma linha: static int x, y;
         while self.peek() and self.peek()[1] == ',':
             self.match('SYMBOL', ',')
             self.match('IDENTIFIER')
@@ -175,18 +175,17 @@ class Parser:
 
     def parse_subroutine(self):
         self.open_tag("subroutineDec")
-        self.match('KEYWORD') # constructor | function | method
-        self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER') # void | type
-        self.match('IDENTIFIER') # subroutineName
+        self.match('KEYWORD')
+        self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER')
+        self.match('IDENTIFIER')
         self.match('SYMBOL', '(')
-        self.parse_parameter_list() # Precisaremos criar este método simples
+        self.parse_parameter_list()
         self.match('SYMBOL', ')')
         
-        # Subroutine Body
         self.open_tag("subroutineBody")
         self.match('SYMBOL', '{')
         while self.peek() and self.peek()[1] == 'var':
-            self.parse_var_dec() # Precisaremos criar este também
+            self.parse_var_dec()
         self.parse_statements()
         self.match('SYMBOL', '}')
         self.close_tag("subroutineBody")
@@ -196,11 +195,9 @@ class Parser:
         self.open_tag("varDec")
         self.match('KEYWORD', 'var')
         
-        # O tipo pode ser keyword (int, char...) ou um identificador (ClassName)
-        self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER') 
-        self.match('IDENTIFIER') # varName
+        self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER')
+        self.match('IDENTIFIER')
         
-        # Trata múltiplas variáveis: var int a, b, c;
         while self.peek() and self.peek()[1] == ',':
             self.match('SYMBOL', ',')
             self.match('IDENTIFIER')
@@ -211,13 +208,10 @@ class Parser:
     def parse_parameter_list(self):
         self.open_tag("parameterList")
         
-        # Se o próximo token não for ')', significa que há parâmetros
         if self.peek() and self.peek()[1] != ')':
-            # Primeiro parâmetro: tipo e nome
             self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER')
             self.match('IDENTIFIER')
             
-            # Parâmetros adicionais separados por vírgula
             while self.peek() and self.peek()[1] == ',':
                 self.match('SYMBOL', ',')
                 self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER')
@@ -225,17 +219,20 @@ class Parser:
         
         self.close_tag("parameterList")
 
-    
     def parse_statements(self):
         self.open_tag("statements")
-        # Continua processando enquanto houver palavras-chave de comandos
         while self.peek() and self.peek()[1] in ['let', 'if', 'while', 'do', 'return']:
             val = self.peek()[1]
-            if val == 'let': self.parse_let()
-            elif val == 'if': self.parse_if()
-            elif val == 'while': self.parse_while()
-            elif val == 'do': self.parse_do()
-            elif val == 'return': self.parse_return()
+            if val == 'let':
+                self.parse_let()
+            elif val == 'if':
+                self.parse_if()
+            elif val == 'while':
+                self.parse_while()
+            elif val == 'do':
+                self.parse_do()
+            elif val == 'return':
+                self.parse_return()
         self.close_tag("statements")
 
     def parse_if(self):
@@ -248,7 +245,6 @@ class Parser:
         self.parse_statements()
         self.match('SYMBOL', '}')
         
-        # Trata o else opcional
         if self.peek() and self.peek()[1] == 'else':
             self.match('KEYWORD', 'else')
             self.match('SYMBOL', '{')
@@ -270,28 +266,27 @@ class Parser:
     def parse_do(self):
         self.open_tag("doStatement")
         self.match('KEYWORD', 'do')
-        
+
         self.match('IDENTIFIER')
-        
-        # É uma chamada de método/classe? (ex: Screen.draw)
+
         if self.peek() and self.peek()[1] == '.':
             self.match('SYMBOL', '.')
-            self.match('IDENTIFIER') # Nome da sub-rotina após o ponto
-            
+            self.match('IDENTIFIER')
 
         self.match('SYMBOL', '(')
-        self.parse_expression_list() 
+        self.parse_expression_list()
         self.match('SYMBOL', ')')
-        
 
         self.match('SYMBOL', ';')
-        self.close_tag("doStatement")    
+        self.close_tag("doStatement")
 
     def parse_return(self):
         self.open_tag("returnStatement")
         self.match('KEYWORD', 'return')
+
         if self.peek() and self.peek()[1] != ';':
             self.parse_expression()
+
         self.match('SYMBOL', ';')
         self.close_tag("returnStatement")
 
