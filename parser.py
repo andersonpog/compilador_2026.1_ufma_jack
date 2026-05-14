@@ -27,7 +27,7 @@ class Parser:
         self.vmWriter = VMWriter()
         self.symbol_table = SymbolTable()
 
-        self.class_name = None
+        self.class_name = ""
 
         self.if_label_num = 0
         self.while_label_num = 0
@@ -223,7 +223,12 @@ class Parser:
             self.symbol_table.define("this", self.class_name, Kind.ARG)
 
         self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER')
-        self.match('IDENTIFIER')
+
+        subroutine_name_token = self.match('IDENTIFIER')
+        subroutine_name = subroutine_name_token[1]
+
+        function_name = f"{self.class_name}.{subroutine_name}"
+
         self.match('SYMBOL', '(')
         self.parse_parameter_list()
         self.match('SYMBOL', ')')
@@ -231,8 +236,12 @@ class Parser:
         self.open_tag("subroutineBody")
         self.match('SYMBOL', '{')
 
+        num_locals = 0
+
         while self.peek() and self.peek()[1] == 'var':
-            self.parse_var_dec()
+            num_locals += self.parse_var_dec()
+
+        self.vmWriter.writeFunction(function_name, num_locals)
 
         self.parse_statements()
 
@@ -245,6 +254,7 @@ class Parser:
 
         self.match('KEYWORD', 'var')
         kind = Kind.VAR
+        count = 0
 
         type_token = self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER')
         type_ = type_token[1]
@@ -253,6 +263,7 @@ class Parser:
         name = name_token[1]
 
         self.symbol_table.define(name, type_, kind)
+        count += 1
 
         while self.peek() and self.peek()[1] == ',':
             self.match('SYMBOL', ',')
@@ -261,9 +272,12 @@ class Parser:
             name = name_token[1]
 
             self.symbol_table.define(name, type_, kind)
+            count += 1
 
         self.match('SYMBOL', ';')
         self.close_tag("varDec")
+
+        return count
 
     def parse_parameter_list(self):
         self.open_tag("parameterList")
