@@ -32,6 +32,18 @@ class Parser:
         self.if_label_num = 0
         self.while_label_num = 0
 
+    def kind_to_segment(self, kind):
+        if kind == Kind.STATIC:
+            return Segment.STATIC
+        if kind == Kind.FIELD:
+            return Segment.THIS
+        if kind == Kind.VAR:
+            return Segment.LOCAL
+        if kind == Kind.ARG:
+            return Segment.ARG
+
+        return None
+
     def peek(self):
         if self.current < len(self.tokens):
             return self.tokens[self.current]
@@ -116,14 +128,10 @@ class Parser:
                 self.vmWriter.writeArithmetic(Command.NOT)
 
         elif token_type == 'IDENTIFIER':
+            name = token_value
             self.write_token(self.advance())
 
-            if self.peek() and self.peek()[1] == '[':
-                self.match('SYMBOL', '[')
-                self.parse_expression()
-                self.match('SYMBOL', ']')
-
-            elif self.peek() and self.peek()[1] in ['(', '.']:
+            if self.peek() and self.peek()[1] in ['(', '.']:
                 if self.peek()[1] == '.':
                     self.match('SYMBOL', '.')
                     self.match('IDENTIFIER')
@@ -131,6 +139,19 @@ class Parser:
                 self.match('SYMBOL', '(')
                 self.parse_expression_list()
                 self.match('SYMBOL', ')')
+
+            else:
+                if self.peek() and self.peek()[1] == '[':
+                    self.match('SYMBOL', '[')
+                    self.parse_expression()
+                    self.match('SYMBOL', ']')
+
+                else:
+                    symbol = self.symbol_table.resolve(name)
+
+                    if symbol is not None:
+                        segment = self.kind_to_segment(symbol.kind)
+                        self.vmWriter.writePush(segment, symbol.index)
 
         else:
             raise SyntaxError(f"Termo esperado, encontrado: {token_value}")
