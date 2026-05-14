@@ -445,9 +445,14 @@ class Parser:
         self.open_tag("letStatement")
 
         self.match('KEYWORD', 'let')
-        self.match('IDENTIFIER')
+
+        name_token = self.match('IDENTIFIER')
+        var_name = name_token[1]
+
+        is_array = False
 
         if self.peek() and self.peek()[1] == '[':
+            is_array = True
             self.match('SYMBOL', '[')
             self.parse_expression()
             self.match('SYMBOL', ']')
@@ -455,6 +460,13 @@ class Parser:
         self.match('SYMBOL', '=')
         self.parse_expression()
         self.match('SYMBOL', ';')
+
+        if not is_array:
+            symbol = self.symbol_table.resolve(var_name)
+
+            if symbol is not None:
+                segment = self.kind_to_segment(symbol.kind)
+                self.vmWriter.writePop(segment, symbol.index)
 
         self.close_tag("letStatement")
 
