@@ -44,6 +44,26 @@ class Parser:
 
         return None
 
+    def write_op(self, op):
+        if op == '+':
+            self.vmWriter.writeArithmetic(Command.ADD)
+        elif op == '-':
+            self.vmWriter.writeArithmetic(Command.SUB)
+        elif op == '=':
+            self.vmWriter.writeArithmetic(Command.EQ)
+        elif op == '>':
+            self.vmWriter.writeArithmetic(Command.GT)
+        elif op == '<':
+            self.vmWriter.writeArithmetic(Command.LT)
+        elif op == '&':
+            self.vmWriter.writeArithmetic(Command.AND)
+        elif op == '|':
+            self.vmWriter.writeArithmetic(Command.OR)
+        elif op == '*':
+            self.vmWriter.writeCall("Math.multiply", 2)
+        elif op == '/':
+            self.vmWriter.writeCall("Math.divide", 2)
+
     def peek(self):
         if self.current < len(self.tokens):
             return self.tokens[self.current]
@@ -140,18 +160,28 @@ class Parser:
                 self.parse_expression_list()
                 self.match('SYMBOL', ')')
 
+            elif self.peek() and self.peek()[1] == '[':
+                self.match('SYMBOL', '[')
+                self.parse_expression()
+
+                symbol = self.symbol_table.resolve(name)
+
+                if symbol is not None:
+                    segment = self.kind_to_segment(symbol.kind)
+                    self.vmWriter.writePush(segment, symbol.index)
+                    self.vmWriter.writeArithmetic(Command.ADD)
+
+                self.match('SYMBOL', ']')
+
+                self.vmWriter.writePop(Segment.POINTER, 1)
+                self.vmWriter.writePush(Segment.THAT, 0)
+
             else:
-                if self.peek() and self.peek()[1] == '[':
-                    self.match('SYMBOL', '[')
-                    self.parse_expression()
-                    self.match('SYMBOL', ']')
+                symbol = self.symbol_table.resolve(name)
 
-                else:
-                    symbol = self.symbol_table.resolve(name)
-
-                    if symbol is not None:
-                        segment = self.kind_to_segment(symbol.kind)
-                        self.vmWriter.writePush(segment, symbol.index)
+                if symbol is not None:
+                    segment = self.kind_to_segment(symbol.kind)
+                    self.vmWriter.writePush(segment, symbol.index)
 
         else:
             raise SyntaxError(f"Termo esperado, encontrado: {token_value}")
@@ -163,8 +193,12 @@ class Parser:
         self.parse_term()
 
         while self.peek() and self.peek()[1] in "+-*/&|<>=":
-            self.write_token(self.advance())
+            op_token = self.advance()
+            op = op_token[1]
+            self.write_token(op_token)
+
             self.parse_term()
+            self.write_op(op)
 
         self.close_tag("expression")
 
@@ -449,21 +483,34 @@ class Parser:
         name_token = self.match('IDENTIFIER')
         var_name = name_token[1]
 
+        symbol = self.symbol_table.resolve(var_name)
+
         is_array = False
 
         if self.peek() and self.peek()[1] == '[':
             is_array = True
+
             self.match('SYMBOL', '[')
             self.parse_expression()
+
+            if symbol is not None:
+                segment = self.kind_to_segment(symbol.kind)
+                self.vmWriter.writePush(segment, symbol.index)
+                self.vmWriter.writeArithmetic(Command.ADD)
+
             self.match('SYMBOL', ']')
 
         self.match('SYMBOL', '=')
         self.parse_expression()
         self.match('SYMBOL', ';')
 
-        if not is_array:
-            symbol = self.symbol_table.resolve(var_name)
+        if is_array:
+            self.vmWriter.writePop(Segment.TEMP, 0)
+            self.vmWriter.writePop(Segment.POINTER, 1)
+            self.vmWriter.writePush(Segment.TEMP, 0)
+            self.vmWriter.writePop(Segment.THAT, 0)
 
+        else:
             if symbol is not None:
                 segment = self.kind_to_segment(symbol.kind)
                 self.vmWriter.writePop(segment, symbol.index)
