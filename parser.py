@@ -1,4 +1,5 @@
 from VMWriter import VMWriter, Segment, Command
+from symbol_table import SymbolTable, Kind
 
 
 class Parser:
@@ -24,6 +25,7 @@ class Parser:
         self.indent_level = 0
 
         self.vmWriter = VMWriter()
+        self.symbol_table = SymbolTable()
 
         self.if_label_num = 0
         self.while_label_num = 0
