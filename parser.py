@@ -1,4 +1,4 @@
-from VMWriter import VMWriter
+from VMWriter import VMWriter, Segment
 
 
 class Parser:
@@ -83,8 +83,13 @@ class Parser:
         token_type, token_value = token
 
         # 1. Constantes e Palavras-chave
-        if token_type == 'INT_CONST' or token_type == 'STR_CONST':
+        if token_type == 'INT_CONST':
             self.write_token(self.advance())
+            self.vmWriter.writePush(Segment.CONST, int(token_value))
+
+        elif token_type == 'STR_CONST':
+            self.write_token(self.advance())
+
         elif token_type == 'KEYWORD' and token_value in ['true', 'false', 'null', 'this']:
             self.write_token(self.advance())
 
@@ -102,13 +107,13 @@ class Parser:
         # 4. Identificadores (Variáveis, Arrays ou Chamadas de Função)
         elif token_type == 'IDENTIFIER':
             self.write_token(self.advance())
-            
+
             # Caso seja um Array: varName[expression]
             if self.peek() and self.peek()[1] == '[':
                 self.match('SYMBOL', '[')
                 self.parse_expression()
                 self.match('SYMBOL', ']')
-                
+
             # Caso seja uma chamada de método/função no meio de expressão
             elif self.peek() and self.peek()[1] in ['(', '.']:
                 if self.peek()[1] == '.':
@@ -135,14 +140,14 @@ class Parser:
 
     def parse_expression_list(self):
         self.open_tag("expressionList")
-        
+
         if self.peek() and self.peek()[1] != ')':
             self.parse_expression()
-            
+
             while self.peek() and self.peek()[1] == ',':
                 self.match('SYMBOL', ',')
                 self.parse_expression()
-                
+
         self.close_tag("expressionList")
 
     def parse_class(self):
@@ -150,13 +155,13 @@ class Parser:
         self.match('KEYWORD', 'class')
         self.match('IDENTIFIER')
         self.match('SYMBOL', '{')
-        
+
         while self.peek() and self.peek()[1] in ['static', 'field']:
             self.parse_class_var_dec()
-        
+
         while self.peek() and self.peek()[1] in ['constructor', 'function', 'method']:
             self.parse_subroutine()
-            
+
         self.match('SYMBOL', '}')
         self.close_tag("class")
 
@@ -165,11 +170,11 @@ class Parser:
         self.match('KEYWORD')
         self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER')
         self.match('IDENTIFIER')
-        
+
         while self.peek() and self.peek()[1] == ',':
             self.match('SYMBOL', ',')
             self.match('IDENTIFIER')
-            
+
         self.match('SYMBOL', ';')
         self.close_tag("classVarDec")
 
@@ -181,12 +186,15 @@ class Parser:
         self.match('SYMBOL', '(')
         self.parse_parameter_list()
         self.match('SYMBOL', ')')
-        
+
         self.open_tag("subroutineBody")
         self.match('SYMBOL', '{')
+
         while self.peek() and self.peek()[1] == 'var':
             self.parse_var_dec()
+
         self.parse_statements()
+
         self.match('SYMBOL', '}')
         self.close_tag("subroutineBody")
         self.close_tag("subroutineDec")
@@ -194,35 +202,37 @@ class Parser:
     def parse_var_dec(self):
         self.open_tag("varDec")
         self.match('KEYWORD', 'var')
-        
+
         self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER')
         self.match('IDENTIFIER')
-        
+
         while self.peek() and self.peek()[1] == ',':
             self.match('SYMBOL', ',')
             self.match('IDENTIFIER')
-            
+
         self.match('SYMBOL', ';')
         self.close_tag("varDec")
 
     def parse_parameter_list(self):
         self.open_tag("parameterList")
-        
+
         if self.peek() and self.peek()[1] != ')':
             self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER')
             self.match('IDENTIFIER')
-            
+
             while self.peek() and self.peek()[1] == ',':
                 self.match('SYMBOL', ',')
                 self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER')
                 self.match('IDENTIFIER')
-        
+
         self.close_tag("parameterList")
 
     def parse_statements(self):
         self.open_tag("statements")
+
         while self.peek() and self.peek()[1] in ['let', 'if', 'while', 'do', 'return']:
             val = self.peek()[1]
+
             if val == 'let':
                 self.parse_let()
             elif val == 'if':
@@ -233,6 +243,7 @@ class Parser:
                 self.parse_do()
             elif val == 'return':
                 self.parse_return()
+
         self.close_tag("statements")
 
     def parse_if(self):
@@ -244,12 +255,13 @@ class Parser:
         self.match('SYMBOL', '{')
         self.parse_statements()
         self.match('SYMBOL', '}')
-        
+
         if self.peek() and self.peek()[1] == 'else':
             self.match('KEYWORD', 'else')
             self.match('SYMBOL', '{')
             self.parse_statements()
             self.match('SYMBOL', '}')
+
         self.close_tag("ifStatement")
 
     def parse_while(self):
@@ -286,8 +298,13 @@ class Parser:
 
         if self.peek() and self.peek()[1] != ';':
             self.parse_expression()
+        else:
+            self.vmWriter.writePush(Segment.CONST, 0)
 
         self.match('SYMBOL', ';')
+
+        self.vmWriter.writeReturn()
+
         self.close_tag("returnStatement")
 
     def parse_let(self):
@@ -334,6 +351,6 @@ class Parser:
 
     def get_xml(self):
         return "\n".join(self.xml_output) + "\n"
-  
+
     def get_vm_output(self):
         return self.vmWriter.vmOutput()
