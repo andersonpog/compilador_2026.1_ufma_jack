@@ -27,6 +27,8 @@ class Parser:
         self.vmWriter = VMWriter()
         self.symbol_table = SymbolTable()
 
+        self.class_name = None
+
         self.if_label_num = 0
         self.while_label_num = 0
 
@@ -159,8 +161,12 @@ class Parser:
 
     def parse_class(self):
         self.open_tag("class")
+
         self.match('KEYWORD', 'class')
-        self.match('IDENTIFIER')
+
+        class_name_token = self.match('IDENTIFIER')
+        self.class_name = class_name_token[1]
+
         self.match('SYMBOL', '{')
 
         while self.peek() and self.peek()[1] in ['static', 'field']:
@@ -174,13 +180,30 @@ class Parser:
 
     def parse_class_var_dec(self):
         self.open_tag("classVarDec")
-        self.match('KEYWORD')
-        self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER')
-        self.match('IDENTIFIER')
+
+        kind_token = self.match('KEYWORD')
+        kind_value = kind_token[1]
+
+        if kind_value == 'static':
+            kind = Kind.STATIC
+        else:
+            kind = Kind.FIELD
+
+        type_token = self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER')
+        type_ = type_token[1]
+
+        name_token = self.match('IDENTIFIER')
+        name = name_token[1]
+
+        self.symbol_table.define(name, type_, kind)
 
         while self.peek() and self.peek()[1] == ',':
             self.match('SYMBOL', ',')
-            self.match('IDENTIFIER')
+
+            name_token = self.match('IDENTIFIER')
+            name = name_token[1]
+
+            self.symbol_table.define(name, type_, kind)
 
         self.match('SYMBOL', ';')
         self.close_tag("classVarDec")
@@ -191,7 +214,14 @@ class Parser:
         self.if_label_num = 0
         self.while_label_num = 0
 
-        self.match('KEYWORD')
+        self.symbol_table.start_subroutine()
+
+        subroutine_type_token = self.match('KEYWORD')
+        subroutine_type = subroutine_type_token[1]
+
+        if subroutine_type == 'method':
+            self.symbol_table.define("this", self.class_name, Kind.ARG)
+
         self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER')
         self.match('IDENTIFIER')
         self.match('SYMBOL', '(')
@@ -212,14 +242,25 @@ class Parser:
 
     def parse_var_dec(self):
         self.open_tag("varDec")
-        self.match('KEYWORD', 'var')
 
-        self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER')
-        self.match('IDENTIFIER')
+        self.match('KEYWORD', 'var')
+        kind = Kind.VAR
+
+        type_token = self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER')
+        type_ = type_token[1]
+
+        name_token = self.match('IDENTIFIER')
+        name = name_token[1]
+
+        self.symbol_table.define(name, type_, kind)
 
         while self.peek() and self.peek()[1] == ',':
             self.match('SYMBOL', ',')
-            self.match('IDENTIFIER')
+
+            name_token = self.match('IDENTIFIER')
+            name = name_token[1]
+
+            self.symbol_table.define(name, type_, kind)
 
         self.match('SYMBOL', ';')
         self.close_tag("varDec")
@@ -227,14 +268,27 @@ class Parser:
     def parse_parameter_list(self):
         self.open_tag("parameterList")
 
+        kind = Kind.ARG
+
         if self.peek() and self.peek()[1] != ')':
-            self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER')
-            self.match('IDENTIFIER')
+            type_token = self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER')
+            type_ = type_token[1]
+
+            name_token = self.match('IDENTIFIER')
+            name = name_token[1]
+
+            self.symbol_table.define(name, type_, kind)
 
             while self.peek() and self.peek()[1] == ',':
                 self.match('SYMBOL', ',')
-                self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER')
-                self.match('IDENTIFIER')
+
+                type_token = self.match('KEYWORD' if self.peek()[0] == 'KEYWORD' else 'IDENTIFIER')
+                type_ = type_token[1]
+
+                name_token = self.match('IDENTIFIER')
+                name = name_token[1]
+
+                self.symbol_table.define(name, type_, kind)
 
         self.close_tag("parameterList")
 
